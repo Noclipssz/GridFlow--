@@ -2,11 +2,16 @@
 
 use App\Http\Controllers\ProfBasicController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminScheduleController;
 
 
 Route::get('/', function () {
     return view('prof/basic/login');
 });
+
+Route::get('/admin/grade', [AdminScheduleController::class, 'form'])->name('admin.grade.form');
+Route::post('/admin/grade/generate', [AdminScheduleController::class, 'generate'])->name('admin.grade.generate');
+
 
 Route::get('/prof/login',      [ProfBasicController::class, 'showLogin'])->name('prof.basic.login');
 Route::post('/prof/login',     [ProfBasicController::class, 'doLogin'])->name('prof.basic.login.post');
