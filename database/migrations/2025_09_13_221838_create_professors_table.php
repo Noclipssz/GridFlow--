@@ -8,16 +8,11 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('professores', function (Blueprint $table) {
-            $table->tinyIncrements('id');                 // Byte (0–255)
+            $table->id();
             $table->string('nome');
-            $table->unsignedTinyInteger('materia_id');    // FK para materias.id
-            $table->json('horario_dp')->nullable();       // byte[][]
+            $table->foreignId('materia_id')->constrained('materias')->onDelete('restrict');
+            $table->json("horario_dp")->nullable();       // byte[][]
             $table->timestamps();
-
-            $table->foreign('materia_id')
-                ->references('id')->on('materias')
-                ->onUpdate('cascade')
-                ->onDelete('restrict');
         });
     }
 

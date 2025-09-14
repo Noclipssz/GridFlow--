@@ -26,3 +26,17 @@ Route::get('/prof/horario',  [ProfBasicController::class, 'showSchedule'])->name
 Route::post('/prof/horario', [ProfBasicController::class, 'saveSchedule'])->name('prof.basic.schedule.save');
 
 
+
+
+Route::prefix("admin/turmas")->group(function () {
+    Route::get("/", [AdminTurmaController::class, "index"])->name("admin.turmas.index");
+    Route::get("/create", [AdminTurmaController::class, "create"])->name("admin.turmas.create");
+    Route::post("/", [AdminTurmaController::class, "store"])->name("admin.turmas.store");
+    Route::get("/{turma}/edit", [AdminTurmaController::class, "edit"])->name("admin.turmas.edit");
+    Route::put("/{turma}", [AdminTurmaController::class, "update"])->name("admin.turmas.update");
+    Route::delete("/{turma}", [AdminTurmaController::class, "destroy"])->name("admin.turmas.destroy");
+    Route::get("/{turma}/associar", [AdminTurmaController::class, "associar"])->name("admin.turmas.associar");
+    Route::post("/{turma}/associar", [AdminTurmaController::class, "salvarAssociacao"])->name("admin.turmas.salvarAssociacao");
+});
+
+

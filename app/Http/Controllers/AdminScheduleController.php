@@ -5,43 +5,53 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Materia;
 use App\Models\Professor;
+use App\Models\Turma;
 
 class AdminScheduleController extends Controller
 {
     public function form()
     {
-        // Carrega todas as matérias com seus professores
-        $materias = Materia::with('professores')->orderBy('id')->get();
+        $materias = Materia::with("professores")->orderBy("id")->get();
+        $turmas = Turma::orderBy("nome")->get();
 
-        return view('admin.grade', [
-            'materias' => $materias,
-            'grid'     => null,   // primeiro load sem grade
-            'meta'     => null,
+        return view("admin.grade", [
+            "materias" => $materias,
+            "turmas" => $turmas,
+            "grid" => null,
+            "meta" => null,
         ]);
     }
 
     public function generate(Request $request)
     {
-        // selected[<materia_id>] = <professor_id> (ou vazio)
-        $selected = (array) $request->input('selected', []);
+        $selected = (array) $request->input("selected", []);
+        $turmaId = $request->input("turma_id");
 
-        // Busca apenas os professores escolhidos
-        $professors = Professor::with('materia')
-            ->whereIn('id', array_filter(array_values($selected)))
-            ->get()
-            ->values();
+        $professorsQuery = Professor::with("materia");
+        $materiasQuery = Materia::query();
 
-        // Gera a grade
+        if ($turmaId) {
+            $turma = Turma::with("professors", "materias")->find($turmaId);
+            if ($turma) {
+                $professorsQuery->whereIn("id", $turma->professors->pluck("id"));
+                $materiasQuery->whereIn("id", $turma->materias->pluck("id"));
+            }
+        }
+
+        $professors = $professorsQuery->whereIn("id", array_filter(array_values($selected)))->get()->values();
+        $materias = $materiasQuery->with("professores")->orderBy("id")->get();
+
         [$grid, $meta] = $this->buildGrid($professors);
 
-        // Recarrega matérias para re-renderizar o form
-        $materias = Materia::with('professores')->orderBy('id')->get();
+        $turmas = Turma::orderBy("nome")->get();
 
-        return view('admin.grade', [
-            'materias' => $materias,
-            'grid'     => $grid,  // [aula][dia] para a UI
-            'meta'     => $meta,  // iterações/tempo/restantes
-            'selected' => $selected,
+        return view("admin.grade", [
+            "materias" => $materias,
+            "turmas" => $turmas,
+            "grid" => $grid,
+            "meta" => $meta,
+            "selected" => $selected,
+            "selectedTurma" => $turmaId,
         ]);
     }
 
@@ -54,9 +64,9 @@ class AdminScheduleController extends Controller
      */
     private function buildGrid($professors): array
     {
-        $DAYS  = 5; // seg..sex
+        $DAYS = 5; // seg..sex
         $SLOTS = 5; // 1ª..5ª
-        $grid = array_fill(0, $SLOTS, array_fill(0, $DAYS, ''));
+        $grid = array_fill(0, $SLOTS, array_fill(0, $DAYS, ""));
         $need = [];
 
         foreach ($professors as $p) {
@@ -69,7 +79,7 @@ class AdminScheduleController extends Controller
         do {
             $iterations++;
             // limpa a grid e contador
-            $grid = array_fill(0, $SLOTS, array_fill(0, $DAYS, ''));
+            $grid = array_fill(0, $SLOTS, array_fill(0, $DAYS, ""));
             $remaining = $need;
 
             $order = $professors->all();
@@ -79,7 +89,7 @@ class AdminScheduleController extends Controller
                 $toPlace = (int) ($remaining[$p->id] ?? 0);
                 if ($toPlace <= 0) continue;
 
-                $matName = $p->materia->nome ?? '—';
+                $matName = $p->materia->nome ?? "—";
                 // horario_dp no banco está [dia][aula]
                 $h = $p->horario_dp;
                 if (!is_array($h)) $h = json_decode((string)$h, true) ?? [];
@@ -87,8 +97,8 @@ class AdminScheduleController extends Controller
                 for ($d = 0; $d < $DAYS; $d++) {           // dia
                     for ($a = 0; $a < $SLOTS; $a++) {      // aula
                         $allowed = (int) ($h[$d][$a] ?? 0) === 1;
-                        if ($allowed && $grid[$a][$d] === '') {
-                            $grid[$a][$d] = $matName . ' — ' . $p->nome; // mostra matéria + professor
+                        if ($allowed && $grid[$a][$d] === "") {
+                            $grid[$a][$d] = $matName . " — " . $p->nome; // mostra matéria + professor
                             $toPlace--;
                             if ($toPlace === 0) break 2; // próxima pessoa
                         }
@@ -104,11 +114,13 @@ class AdminScheduleController extends Controller
         $end = hrtime(true);
 
         $meta = [
-            'iterations'  => $iterations,
-            'duration_ms' => (int) (($end - $start) / 1e6),
-            'remaining'   => $remaining ?? [],
+            "iterations" => $iterations,
+            "duration_ms" => (int) (($end - $start) / 1e6),
+            "remaining" => $remaining ?? [],
         ];
 
         return [$grid, $meta];
     }
 }
+
+
