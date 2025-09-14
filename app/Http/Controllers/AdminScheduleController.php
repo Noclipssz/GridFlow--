@@ -99,7 +99,7 @@ class AdminScheduleController extends Controller
             }
 
             $done = array_sum($remaining) === 0;
-        } while (!$done && $iterations < 200);
+        } while (!$done && $iterations < 900);
 
         $end = hrtime(true);
 
