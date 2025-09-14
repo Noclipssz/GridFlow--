@@ -6,6 +6,8 @@ use App\Models\Professor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ProfBasicController extends Controller
 {
@@ -97,4 +99,112 @@ class ProfBasicController extends Controller
         return redirect()->route('prof.basic.login');
     }
 
+    public function showSchedule(Request $request)
+    {
+        $id = $request->session()->get('prof_id');
+        if (!$id) return redirect()->route('prof.basic.login');
+
+        $prof = Professor::findOrFail($id);
+
+        // Config da grade (ajuste se quiser 5x5, 6x4, etc.)
+        $rows = 5; // 1ª..6ª aula
+        $cols = 5; // Segunda..Sexta
+        $days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+
+        // Normaliza o horario_dp do banco para o tamanho escolhido
+        $grid = $prof->horario_dp;
+        Log::info('showSchedule: raw grid from DB', ['grid' => $grid]);
+
+        if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+
+        // pad/truncate
+        $norm = [];
+        for ($i = 0; $i < $rows; $i++) {
+            $row = $grid[$i] ?? [];
+            $row = array_map(fn($v) => (int)!!$v, array_slice($row, 0, $cols));
+            $row = array_pad($row, $cols, 0);
+            $norm[] = $row;
+        }
+
+        Log::info('showSchedule: normalized grid', ['norm' => $norm]);
+
+        return view('prof.basic.schedule', [
+            'prof' => $prof,
+            'rows' => $rows,
+            'cols' => $cols,
+            'days' => $days,
+            'grid' => $norm,
+        ]);
+    }
+
+    public function saveSchedule(Request $request)
+    {
+        $id = $request->session()->get('prof_id');
+
+        Log::info('schedule.save: hit', [
+            'prof_id' => $id,
+            // cuidado com payload grande — logue só o tamanho:
+            'grid_len' => strlen((string) $request->input('grid')),
+            'route' => 'prof.basic.schedule.save',
+        ]);
+
+        if (!$id) {
+            Log::warning('schedule.save: no session prof_id');
+            return redirect()->route('prof.basic.login');
+        }
+
+        try {
+            $request->validate(['grid' => ['required', 'json']]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('schedule.save: validation failed', ['errors' => $e->errors()]);
+            throw $e;
+        }
+
+        $raw = (string) $request->input('grid');
+        $grid = json_decode($raw, true);
+        Log::info('schedule.save: decoded', [
+            'json_error' => json_last_error_msg(),
+            'decoded_type' => gettype($grid),
+            'rows' => is_array($grid) ? count($grid) : null,
+        ]);
+
+        // Sanitiza para 0/1
+        $grid = array_map(
+            fn($row) => array_map(fn($v) => (int) !!$v, (array) $row),
+            (array) $grid
+        );
+
+        // Salvar com comparação antes/depois
+        DB::transaction(function () use ($id, $grid) {
+            /** @var \App\Models\Professor $prof */
+            $prof = \App\Models\Professor::lockForUpdate()->findOrFail($id);
+
+            Log::info('schedule.save: BEFORE', [
+                'id' => $prof->id,
+                'raw' => $prof->getRawOriginal('horario_dp'),
+                'cast_type' => gettype($prof->horario_dp),
+                'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
+            ]);
+
+            $prof->horario_dp = $grid; // (cast array->json)
+
+            Log::info('schedule.save: isDirty', ['isDirty' => $prof->isDirty()]);
+            Log::info('schedule.save: getDirty', ['getDirty' => $prof->getDirty()]);
+
+            $result = $prof->save();
+
+            Log::info('schedule.save: save result', ['result' => $result]);
+
+            $prof->refresh();
+
+            Log::info('schedule.save: AFTER', [
+                'id' => $prof->id,
+                'raw' => $prof->getRawOriginal('horario_dp'),
+                'cast_type' => gettype($prof->horario_dp),
+                'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
+            ]);
+        });
+
+        return redirect()->route('prof.basic.schedule')->with('ok', 'Disponibilidades salvas!');
+    }
 }

@@ -17,3 +17,7 @@ Route::post('/prof/cadastrar', [ProfBasicController::class, 'doRegister'])->name
 Route::get('/prof/dashboard',  [ProfBasicController::class, 'dashboard'])->name('prof.basic.dashboard');
 Route::post('/prof/logout',    [ProfBasicController::class, 'logout'])->name('prof.basic.logout');
 
+Route::get('/prof/horario',  [ProfBasicController::class, 'showSchedule'])->name('prof.basic.schedule');
+Route::post('/prof/horario', [ProfBasicController::class, 'saveSchedule'])->name('prof.basic.schedule.save');
+
+
