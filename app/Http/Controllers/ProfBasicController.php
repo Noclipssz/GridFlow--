@@ -112,28 +112,31 @@ class ProfBasicController extends Controller
         $days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
         // Normaliza o horario_dp do banco para o tamanho escolhido
-        $grid = $prof->horario_dp;
-        Log::info('showSchedule: raw grid from DB', ['grid' => $grid]);
+        $gridFromDb = $prof->horario_dp; // This is [day][class]
+        Log::info('showSchedule: raw grid from DB', ['grid' => $gridFromDb]);
 
-        if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+        if (!is_array($gridFromDb)) $gridFromDb = json_decode((string) $gridFromDb, true) ?? [];
 
-        // pad/truncate
+        // Transpose for display: [day][class] -> [class][day]
+        $gridForDisplay = $this->transpose($gridFromDb);
+
+        // pad/truncate for display dimensions (aula x dia)
         $norm = [];
-        for ($i = 0; $i < $rows; $i++) {
-            $row = $grid[$i] ?? [];
-            $row = array_map(fn($v) => (int)!!$v, array_slice($row, 0, $cols));
+        for ($i = 0; $i < $rows; $i++) { // $rows is for display (aula)
+            $row = $gridForDisplay[$i] ?? [];
+            $row = array_map(fn($v) => (int)!!$v, array_slice($row, 0, $cols)); // $cols is for display (dia)
             $row = array_pad($row, $cols, 0);
             $norm[] = $row;
         }
 
-        Log::info('showSchedule: normalized grid', ['norm' => $norm]);
+        Log::info('showSchedule: normalized grid for display', ['norm' => $norm]);
 
         return view('prof.basic.schedule', [
             'prof' => $prof,
             'rows' => $rows,
             'cols' => $cols,
             'days' => $days,
-            'grid' => $norm,
+            'grid' => $norm, // This is [class][day]
         ]);
     }
 
@@ -161,21 +164,24 @@ class ProfBasicController extends Controller
         }
 
         $raw = (string) $request->input('grid');
-        $grid = json_decode($raw, true);
+        $gridFromFrontend = json_decode($raw, true); // This is [class][day]
         Log::info('schedule.save: decoded', [
             'json_error' => json_last_error_msg(),
-            'decoded_type' => gettype($grid),
-            'rows' => is_array($grid) ? count($grid) : null,
+            'decoded_type' => gettype($gridFromFrontend),
+            'rows' => is_array($gridFromFrontend) ? count($gridFromFrontend) : null,
         ]);
 
-        // Sanitiza para 0/1
-        $grid = array_map(
+        // Transpose for saving: [class][day] -> [day][class]
+        $gridForDb = $this->transpose($gridFromFrontend);
+
+        // Sanitiza para 0/1 (apply to the transposed grid)
+        $gridForDb = array_map(
             fn($row) => array_map(fn($v) => (int) !!$v, (array) $row),
-            (array) $grid
+            (array) $gridForDb
         );
 
         // Salvar com comparação antes/depois
-        DB::transaction(function () use ($id, $grid) {
+        DB::transaction(function () use ($id, $gridForDb) {
             /** @var \App\Models\Professor $prof */
             $prof = \App\Models\Professor::lockForUpdate()->findOrFail($id);
 
@@ -186,7 +192,7 @@ class ProfBasicController extends Controller
                 'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
             ]);
 
-            $prof->horario_dp = $grid; // (cast array->json)
+            $prof->horario_dp = $gridForDb; // (cast array->json)
 
             Log::info('schedule.save: isDirty', ['isDirty' => $prof->isDirty()]);
             Log::info('schedule.save: getDirty', ['getDirty' => $prof->getDirty()]);
@@ -206,5 +212,25 @@ class ProfBasicController extends Controller
         });
 
         return redirect()->route('prof.basic.schedule')->with('ok', 'Disponibilidades salvas!');
+    }
+
+    private function transpose(array $grid): array
+    {
+        $transposed = [];
+        if (empty($grid)) {
+            return $transposed;
+        }
+
+        $numRows = count($grid);
+        $numCols = count($grid[0]);
+
+        for ($c = 0; $c < $numCols; $c++) {
+            $transposedRow = [];
+            for ($r = 0; $r < $numRows; $r++) {
+                $transposedRow[] = $grid[$r][$c];
+            }
+            $transposed[] = $transposedRow;
+        }
+        return $transposed;
     }
 }

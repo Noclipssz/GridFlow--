@@ -10,5 +10,6 @@
     @csrf
     <button type="submit">Sair</button>
   </form>
+  <p><a href="{{ route('prof.basic.schedule') }}">Aulas</a></p>
 </body>
 </html>

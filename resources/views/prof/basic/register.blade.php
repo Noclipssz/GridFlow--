@@ -26,7 +26,7 @@
     <label>Confirmar Senha</label><br>
     <input type="password" name="senha_confirmation"><br><br>
 
-    <label>Matéria (opcional)</label><br>
+    <label>Matéria</label><br>
     <input type="number" name="materia_id" value="{{ old('materia_id') }}" placeholder="ID da matéria"><br><br>
 
     <button type="submit">Cadastrar</button>
