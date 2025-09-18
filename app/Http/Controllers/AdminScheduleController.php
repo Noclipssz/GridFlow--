@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Materia;
 use App\Models\Professor;
 use App\Models\Turma;
+use App\Models\Horario;
 
 class AdminScheduleController extends Controller
 {
@@ -120,6 +121,23 @@ class AdminScheduleController extends Controller
         ];
 
         return [$grid, $meta];
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'turma_id' => 'required|exists:turmas,id',
+            'nome' => 'required|string|max:255',
+            'grid' => 'required|json',
+        ]);
+
+        Horario::create([
+            'turma_id' => $request->turma_id,
+            'nome' => $request->nome,
+            'grid' => json_decode($request->grid, true),
+        ]);
+
+        return redirect()->route('admin.turmas.index')->with('success', 'Horário salvo com sucesso!');
     }
 }
 

@@ -73,6 +73,12 @@ class AdminTurmaController extends Controller
 
         return redirect()->route("admin.turmas.index")->with("success", "Associações salvas com sucesso!");
     }
+
+    public function show(Turma $turma)
+    {
+        $turma->load('horarios');
+        return view('admin.turmas.show', compact('turma'));
+    }
 }
 
 

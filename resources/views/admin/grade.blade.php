@@ -20,10 +20,23 @@
       @csrf
 
       <div class="flex items-start justify-between gap-4 mb-4">
-        <p class="font-medium text-slate-900">
-          Selecione <span class="font-semibold text-indigo-600">um professor por matéria</span>
-        </p>
-        <p class="text-sm text-slate-500">Deixe em branco para ignorar a matéria nesta geração.</p>
+        <div>
+          <p class="font-medium text-slate-900">
+            Selecione <span class="font-semibold text-indigo-600">um professor por matéria</span>
+          </p>
+          <p class="text-sm text-slate-500">Deixe em branco para ignorar a matéria nesta geração.</p>
+        </div>
+        <div>
+          <label for="turma_id" class="text-sm font-semibold text-slate-700">Filtrar por Turma</label>
+          <select name="turma_id" id="turma_id" class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm mt-1">
+            <option value="">— Todas —</option>
+            @foreach ($turmas as $turma)
+              <option value="{{ $turma->id }}" @selected(isset($selectedTurma) && (int)$selectedTurma === $turma->id)>
+                {{ $turma->nome }}
+              </option>
+            @endforeach
+          </select>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,16 +132,24 @@
         </div>
 
         {{-- Ações (ex.: salvar a grade no futuro) --}}
-        <div class="mt-5 flex justify-end gap-3">
-          <button type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-slate-900">
-            Exportar (PDF/CSV)
-          </button>
-          <button type="button"
-                  class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-emerald-700">
-            Salvar grade
-          </button>
-        </div>
+        @if (isset($selectedTurma))
+        <form method="POST" action="{{ route('admin.grade.store') }}" class="mt-5">
+            @csrf
+            <input type="hidden" name="turma_id" value="{{ $selectedTurma }}">
+            <input type="hidden" name="grid" value="{{ json_encode($grid) }}">
+
+            <div class="flex justify-end gap-3 items-center">
+                <div>
+                    <label for="nome" class="text-sm font-semibold text-slate-700">Nome do Horário</label>
+                    <input type="text" name="nome" id="nome" required class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm mt-1" placeholder="Ex: Horário 2025/1">
+                </div>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-emerald-700">
+                    Salvar grade
+                </button>
+            </div>
+        </form>
+        @endif
       </div>
     @endif
   </div>

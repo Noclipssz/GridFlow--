@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfBasicController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminScheduleController;
+use App\Http\Controllers\AdminTurmaController;
 
 
 Route::get('/', function () {
@@ -11,6 +12,7 @@ Route::get('/', function () {
 
 Route::get('/admin/grade', [AdminScheduleController::class, 'form'])->name('admin.grade.form');
 Route::post('/admin/grade/generate', [AdminScheduleController::class, 'generate'])->name('admin.grade.generate');
+Route::post('/admin/grade/store', [AdminScheduleController::class, 'store'])->name('admin.grade.store');
 
 
 Route::get('/prof/login',      [ProfBasicController::class, 'showLogin'])->name('prof.basic.login');
@@ -37,6 +39,7 @@ Route::prefix("admin/turmas")->group(function () {
     Route::delete("/{turma}", [AdminTurmaController::class, "destroy"])->name("admin.turmas.destroy");
     Route::get("/{turma}/associar", [AdminTurmaController::class, "associar"])->name("admin.turmas.associar");
     Route::post("/{turma}/associar", [AdminTurmaController::class, "salvarAssociacao"])->name("admin.turmas.salvarAssociacao");
+    Route::get("/{turma}/show", [AdminTurmaController::class, "show"])->name("admin.turmas.show");
 });
 
 
