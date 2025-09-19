@@ -14,9 +14,11 @@ class AdminScheduleController extends Controller
     {
         // Carrega todas as matérias com seus professores
         $materias = Materia::with('professores')->orderBy('id')->get();
+        $periodo = request()->input('periodo', 'manha');
         $allTurmas = Turma::orderBy('id')->get();
-        $turmas = $allTurmas->filter(fn($t) => !$this->turmaHasSchedule($t));
-        $turmasLocked = $allTurmas->filter(fn($t) => $this->turmaHasSchedule($t));
+        // Somente turmas do período selecionado
+        $turmas = $allTurmas->filter(fn($t) => $t->periodo === $periodo && !$this->turmaHasSchedule($t, $periodo));
+        $turmasLocked = $allTurmas->filter(fn($t) => $t->periodo === $periodo && $this->turmaHasSchedule($t, $periodo));
 
         return view('admin.grade', [
             'materias' => $materias,
@@ -24,6 +26,7 @@ class AdminScheduleController extends Controller
             'turmasLocked'  => $turmasLocked,
             'grid'     => null,   // primeiro load sem grade
             'meta'     => null,
+            'periodo'  => $periodo,
         ]);
     }
 
@@ -33,11 +36,12 @@ class AdminScheduleController extends Controller
         $data = $request->validate([
             'turma_id' => ['required', 'integer', 'exists:turmas,id'],
             'selected' => ['array'], // selected[<materia_id>] = <professor_id>
+            'periodo'  => ['required', 'in:manha,tarde,noite'],
         ]);
         $turma = Turma::findOrFail((int) $data['turma_id']);
-        if ($this->turmaHasSchedule($turma)) {
+        if ($turma->periodo !== $data['periodo'] || $this->turmaHasSchedule($turma, $data['periodo'])) {
             return redirect()->route('admin.grade.form')
-                ->withErrors(['turma_id' => 'Esta turma já possui grade salva.'])
+                ->withErrors(['turma_id' => 'Turma inválida para o período selecionado ou já possui grade.'])
                 ->withInput();
         }
 
@@ -51,21 +55,25 @@ class AdminScheduleController extends Controller
             ->values();
 
         // Gera a grade (labels p/ UI e IDs p/ salvar) — prévia, sem persistir
-        [$grid, $meta, $idsGrid] = $this->buildGrid($professors);
+        [$grid, $meta, $idsGrid] = $this->buildGrid($professors, $data['periodo']);
 
-        // Recarrega matérias/turmas para re-renderizar o form
-        $materias = Materia::with('professores')->orderBy('id')->get();
-        $turmas   = Turma::orderBy('id')->get()->filter(fn($t) => !$this->turmaHasSchedule($t));
+        // Recarrega matérias/turmas para re-renderizar o form (respeitando o período)
+        $materias   = Materia::with('professores')->orderBy('id')->get();
+        $allTurmas  = Turma::orderBy('id')->get();
+        $turmas     = $allTurmas->filter(fn($t) => $t->periodo === $data['periodo'] && !$this->turmaHasSchedule($t, $data['periodo']));
+        $turmasLocked = $allTurmas->filter(fn($t) => $t->periodo === $data['periodo'] && $this->turmaHasSchedule($t, $data['periodo']));
 
         return view('admin.grade', [
             'materias' => $materias,
-            'turmas'   => $turmas,
+            'turmas'        => $turmas,
+            'turmasLocked'  => $turmasLocked,
             'grid'     => $grid,  // [aula][dia] para a UI (labels)
             'meta'     => $meta,  // iterações/tempo/restantes
             'selected' => $selected,
             'selected_turma_id' => $turma->id,
             // carrega a matriz de IDs para o botão "Salvar grade"
             'grid_ids' => $idsGrid,
+            'periodo'  => $data['periodo'],
         ]);
     }
 
@@ -74,25 +82,26 @@ class AdminScheduleController extends Controller
         $data = $request->validate([
             'turma_id' => ['required', 'integer', 'exists:turmas,id'],
             'grid_ids' => ['required', 'json'],
+            'periodo'  => ['required', 'in:manha,tarde,noite'],
         ]);
 
         $turma = Turma::findOrFail((int) $data['turma_id']);
-        if ($this->turmaHasSchedule($turma)) {
-            return back()->withErrors(['turma_id' => 'Esta turma já possui grade salva.'])->withInput();
+        if ($turma->periodo !== $data['periodo'] || $this->turmaHasSchedule($turma, $data['periodo'])) {
+            return back()->withErrors(['turma_id' => 'Turma inválida para o período selecionado ou já possui grade.'])->withInput();
         }
         $idsGrid = json_decode((string) $data['grid_ids'], true) ?? [];
 
-        DB::transaction(function () use ($turma, $idsGrid) {
+        DB::transaction(function () use ($turma, $idsGrid, $data) {
             $DAYS = 5; $SLOTS = 5;
 
             // 1) Reverter alocações anteriores desta turma (se houver), sem afetar outras turmas
-            $prev = $turma->horario_dp;
+            $prev = $this->getTurmaGrid($turma, $data['periodo']);
             if (!is_array($prev)) { $prev = json_decode((string) $prev, true) ?? []; }
 
             $otherTurmas = Turma::where('id', '!=', $turma->id)->get();
             $stillAllocated = [];
             foreach ($otherTurmas as $ot) {
-                $g = $ot->horario_dp;
+                $g = $this->getTurmaGrid($ot, $data['periodo']);
                 if (!is_array($g)) $g = json_decode((string) $g, true) ?? [];
                 for ($a = 0; $a < $SLOTS; $a++) {
                     $row = $g[$a] ?? [];
@@ -121,7 +130,7 @@ class AdminScheduleController extends Controller
                 $professores = Professor::whereIn('id', array_keys($toRestoreByProf))->get()->keyBy('id');
                 foreach ($toRestoreByProf as $pid => $coords) {
                     if (!isset($professores[$pid])) continue;
-                    $h = $professores[$pid]->horario_dp;
+                    $h = $this->getProfGrid($professores[$pid], $data['periodo']);
                     if (!is_array($h)) $h = json_decode((string) $h, true) ?? [];
                     // normaliza grade 5x5
                     for ($d = 0; $d < $DAYS; $d++) {
@@ -136,13 +145,13 @@ class AdminScheduleController extends Controller
                             }
                         }
                     }
-                    $professores[$pid]->horario_dp = $h;
+                    $this->setProfGrid($professores[$pid], $data['periodo'], $h);
                     $professores[$pid]->save();
                 }
             }
 
             // 2) Salvar nova grade da turma (IDs estruturados)
-            $turma->horario_dp = $idsGrid;
+            $this->setTurmaGrid($turma, $data['periodo'], $idsGrid);
             $turma->save();
 
             // 3) Marcar nos professores: slots utilizados = 2 (aula)
@@ -161,7 +170,7 @@ class AdminScheduleController extends Controller
                 $professores = Professor::whereIn('id', array_keys($byProf))->get()->keyBy('id');
                 foreach ($byProf as $pid => $coords) {
                     if (!isset($professores[$pid])) continue;
-                    $h = $professores[$pid]->horario_dp;
+                    $h = $this->getProfGrid($professores[$pid], $data['periodo']);
                     if (!is_array($h)) $h = json_decode((string) $h, true) ?? [];
                     // normaliza grade 5x5
                     for ($d = 0; $d < $DAYS; $d++) {
@@ -171,23 +180,23 @@ class AdminScheduleController extends Controller
                     foreach ($coords as [$d, $a]) {
                         $h[$d][$a] = 2; // aula
                     }
-                    $professores[$pid]->horario_dp = $h;
+                    $this->setProfGrid($professores[$pid], $data['periodo'], $h);
                     $professores[$pid]->save();
                 }
             }
         });
 
-        return redirect()->route('admin.grade.form')->with('ok', 'Grade salva com sucesso.');
+        return redirect()->route('admin.grade.form', ['periodo' => $data['periodo']])->with('ok', 'Grade salva com sucesso.');
     }
 
     /**
      * Monta grade 5x5 (Seg..Sex × 1ª..5ª) respeitando:
-     * - horario_dp do professor (JSON [dia][aula] com 1/0)
+     * - horário do professor por período (JSON [dia][aula] com 1/0)
      * - quant_aulas da matéria do professor
      *
-     * UI usa [aula][dia]; horario_dp está [dia][aula] → checar invertido.
+     * UI usa [aula][dia]; no banco está [dia][aula] → checar invertido.
      */
-    private function buildGrid($professors): array
+    private function buildGrid($professors, string $periodo): array
     {
         $DAYS  = 5; // seg..sex
         $SLOTS = 5; // 1ª..5ª
@@ -217,8 +226,8 @@ class AdminScheduleController extends Controller
                 if ($toPlace <= 0) continue;
 
                 $matName = $p->materia->nome ?? '—';
-                // horario_dp no banco está [dia][aula]
-                $h = $p->horario_dp;
+                // disponibilidade no banco está [dia][aula] no período escolhido
+                $h = $this->getProfGrid($p, $periodo);
                 if (!is_array($h)) $h = json_decode((string)$h, true) ?? [];
 
                 for ($d = 0; $d < $DAYS; $d++) {           // dia
@@ -254,9 +263,9 @@ class AdminScheduleController extends Controller
         return [$gridLabels, $meta, $gridIds];
     }
 
-    private function turmaHasSchedule(Turma $turma): bool
+    private function turmaHasSchedule(Turma $turma, string $periodo = 'manha'): bool
     {
-        $grid = $turma->horario_dp;
+        $grid = $this->getTurmaGrid($turma, $periodo);
         if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
         for ($a = 0; $a < 5; $a++) {
             $row = $grid[$a] ?? [];
@@ -272,19 +281,25 @@ class AdminScheduleController extends Controller
 
     public function clear(Request $request, Turma $turma)
     {
+        $periodo = $request->input('periodo', 'manha');
         // Libera a turma: remove alocações desta turma e restaura 2->1 nos professores, sem afetar outras turmas
-        DB::transaction(function () use ($turma) {
+        if ($turma->periodo !== $periodo) {
+            return redirect()->route('admin.grade.form', ['periodo' => $periodo])
+                ->withErrors(['turma_id' => 'Turma não pertence ao período selecionado.']);
+        }
+
+        DB::transaction(function () use ($turma, $periodo) {
             $DAYS = 5; $SLOTS = 5;
 
             // Grade atual desta turma
-            $prev = $turma->horario_dp;
+            $prev = $this->getTurmaGrid($turma, $periodo);
             if (!is_array($prev)) { $prev = json_decode((string) $prev, true) ?? []; }
 
             // Marca slots ainda alocados em outras turmas
             $otherTurmas = Turma::where('id', '!=', $turma->id)->get();
             $stillAllocated = [];
             foreach ($otherTurmas as $ot) {
-                $g = $ot->horario_dp;
+                $g = $this->getTurmaGrid($ot, $periodo);
                 if (!is_array($g)) $g = json_decode((string) $g, true) ?? [];
                 for ($a = 0; $a < $SLOTS; $a++) {
                     $row = $g[$a] ?? [];
@@ -314,7 +329,7 @@ class AdminScheduleController extends Controller
                 $professores = Professor::whereIn('id', array_keys($toRestoreByProf))->get()->keyBy('id');
                 foreach ($toRestoreByProf as $pid => $coords) {
                     if (!isset($professores[$pid])) continue;
-                    $h = $professores[$pid]->horario_dp;
+                    $h = $this->getProfGrid($professores[$pid], $periodo);
                     if (!is_array($h)) $h = json_decode((string) $h, true) ?? [];
                     // normaliza grade 5x5
                     for ($d = 0; $d < $DAYS; $d++) {
@@ -329,16 +344,52 @@ class AdminScheduleController extends Controller
                             }
                         }
                     }
-                    $professores[$pid]->horario_dp = $h;
+                    $this->setProfGrid($professores[$pid], $periodo, $h);
                     $professores[$pid]->save();
                 }
             }
 
             // Limpa grade da turma (deixa null)
-            $turma->horario_dp = null;
+            $this->setTurmaGrid($turma, $periodo, null);
             $turma->save();
         });
 
-        return redirect()->route('admin.grade.form')->with('ok', 'Turma liberada para nova geração.');
+        return redirect()->route('admin.grade.form', ['periodo' => $periodo])->with('ok', 'Turma liberada para nova geração.');
+    }
+
+    private function getProfGrid(Professor $p, string $periodo)
+    {
+        return match($periodo) {
+            'manha' => $p->horario_manha,
+            'tarde' => $p->horario_tarde,
+            'noite' => $p->horario_noite,
+        };
+    }
+
+    private function setProfGrid(Professor $p, string $periodo, $grid): void
+    {
+        match($periodo) {
+            'manha' => $p->horario_manha = $grid,
+            'tarde' => $p->horario_tarde = $grid,
+            'noite' => $p->horario_noite = $grid,
+        };
+    }
+
+    private function getTurmaGrid(Turma $t, string $periodo)
+    {
+        return match($periodo) {
+            'manha' => $t->horario_manha,
+            'tarde' => $t->horario_tarde,
+            'noite' => $t->horario_noite,
+        };
+    }
+
+    private function setTurmaGrid(Turma $t, string $periodo, $grid): void
+    {
+        match($periodo) {
+            'manha' => $t->horario_manha = $grid,
+            'tarde' => $t->horario_tarde = $grid,
+            'noite' => $t->horario_noite = $grid,
+        };
     }
 }

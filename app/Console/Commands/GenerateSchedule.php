@@ -54,8 +54,8 @@ class GenerateSchedule extends Command
                     continue;
                 }
 
-                // horario_dp pode vir castado (array) ou string JSON
-                $h = $prof->horario_dp;
+                // disponibilidade padrão: manhã [dia][aula]
+                $h = $prof->horario_manha;
                 if (!is_array($h)) {
                     $h = json_decode((string) $h, true) ?? [];
                 }

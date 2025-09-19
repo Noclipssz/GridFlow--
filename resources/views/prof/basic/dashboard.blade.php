@@ -67,24 +67,47 @@
               </div>
 
               @php
-                $raw = $prof->horario_dp;
-                $arr = is_array($raw) ? $raw : (json_decode((string)$raw, true) ?? []);
-                $disp = 0; $aulas = 0;
-                foreach ($arr as $dia) {
-                  if (is_array($dia)) {
-                    foreach ($dia as $v) {
-                      $v = (int)$v;
-                      if ($v === 1) $disp++;
-                      elseif ($v === 2) $aulas++;
+                $manhaSrc = $prof->horario_manha;
+                $tardeSrc = $prof->horario_tarde;
+                $noiteSrc = $prof->horario_noite;
+
+                $manha = is_array($manhaSrc) ? $manhaSrc : (json_decode((string)($manhaSrc ?? '[]'), true) ?? []);
+                $tarde = is_array($tardeSrc) ? $tardeSrc : (json_decode((string)($tardeSrc ?? '[]'), true) ?? []);
+                $noite = is_array($noiteSrc) ? $noiteSrc : (json_decode((string)($noiteSrc ?? '[]'), true) ?? []);
+
+                $periods = [
+                  'manha' => $manha,
+                  'tarde' => $tarde,
+                  'noite' => $noite,
+                ];
+                $labels = ['manha' => 'Manhã', 'tarde' => 'Tarde', 'noite' => 'Noite'];
+                $stats = [];
+                foreach ($periods as $key => $arr) {
+                  $disp = 0; $aulas = 0;
+                  foreach ($arr as $dia) {
+                    if (is_array($dia)) {
+                      foreach ($dia as $v) {
+                        $v = (int)$v;
+                        if ($v === 1) $disp++;
+                        elseif ($v === 2) $aulas++;
+                      }
                     }
                   }
+                  $stats[$key] = [$disp, $aulas];
                 }
               @endphp
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs uppercase tracking-wide text-slate-500">Resumo de horários</div>
-                <div class="mt-1 text-sm font-medium text-slate-800">
-                  Disponíveis: <span class="text-emerald-700 font-semibold">{{ $disp }}</span>
-                  • Aulas: <span class="text-indigo-700 font-semibold">{{ $aulas }}</span>
+                <div class="text-xs uppercase tracking-wide text-slate-500">Resumo por período</div>
+                <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  @foreach ($stats as $k => $v)
+                    <a href="{{ route('prof.basic.schedule', ['periodo' => $k]) }}" class="rounded-lg border border-slate-200 bg-white p-3 hover:bg-slate-50">
+                      <div class="text-xs text-slate-500">{{ $labels[$k] }}</div>
+                      <div class="mt-1 text-sm text-slate-800">
+                        Disponíveis: <span class="text-emerald-700 font-semibold">{{ $v[0] }}</span>
+                        • Aulas: <span class="text-indigo-700 font-semibold">{{ $v[1] }}</span>
+                      </div>
+                    </a>
+                  @endforeach
                 </div>
               </div>
             </div>

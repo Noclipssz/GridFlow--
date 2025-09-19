@@ -18,6 +18,14 @@
       </div>
     </div>
 
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-sm font-semibold text-slate-700">Período:</span>
+      @php $p = request('periodo','manha'); @endphp
+      <a href="{{ route('prof.turmas.show', [$turma->id, 'periodo' => 'manha']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='manha' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Manhã</a>
+      <a href="{{ route('prof.turmas.show', [$turma->id, 'periodo' => 'tarde']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='tarde' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Tarde</a>
+      <a href="{{ route('prof.turmas.show', [$turma->id, 'periodo' => 'noite']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='noite' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Noite</a>
+    </div>
+
     <div class="rounded-2xl border border-slate-200 bg-white p-5">
       <div class="overflow-x-auto">
         <table class="w-full border-separate border-spacing-2">
@@ -72,4 +80,3 @@
   </div>
 </body>
 </html>
-

@@ -21,15 +21,35 @@
       </div>
     @endif
     {{-- Header --}}
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-semibold">Gerar grade por matéria</h1>
-      <a href="/" class="text-sm text-slate-500 hover:text-slate-700">Voltar</a>
+      <div class="flex items-center gap-3">
+        <a href="{{ route('admin.turmas.index', ['periodo' => $periodo ?? 'manha']) }}" class="text-sm rounded-xl bg-slate-800 px-4 py-2.5 text-white font-medium">Gerenciar turmas</a>
+        <a href="/" class="text-sm text-slate-500 hover:text-slate-700">Voltar</a>
+      </div>
     </div>
+
+    {{-- Filtro de período --}}
+    <form method="GET" action="{{ route('admin.grade.form') }}" class="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 mb-6">
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-semibold text-slate-700">Período</label>
+        @php $p = old('periodo', $periodo ?? 'manha'); @endphp
+        <select name="periodo" class="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+          <option value="manha" @selected($p==='manha')>Manhã</option>
+          <option value="tarde" @selected($p==='tarde')>Tarde</option>
+          <option value="noite" @selected($p==='noite')>Noite</option>
+        </select>
+        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-slate-900">
+          Aplicar período
+        </button>
+      </div>
+    </form>
 
     {{-- Card: seleção de turma e professores --}}
     <form method="POST" action="{{ route('admin.grade.generate') }}"
           class="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 mb-6">
       @csrf
+      <input type="hidden" name="periodo" value="{{ $periodo ?? 'manha' }}">
 
       <div class="flex flex-col gap-4 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -37,13 +57,16 @@
             <label class="block text-sm font-semibold text-slate-700 mb-1">Turma</label>
             <select name="turma_id" required
                     class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-              <option value="" disabled {{ empty($selected_turma_id ?? null) ? 'selected' : '' }}>Selecione...</option>
+              <option value="" disabled {{ empty(old('turma_id', $selected_turma_id ?? null)) ? 'selected' : '' }}>Selecione...</option>
               @foreach (($turmas ?? []) as $t)
-                <option value="{{ $t->id }}" @selected(($selected_turma_id ?? null) == $t->id)>
+                <option value="{{ $t->id }}" @selected((int)old('turma_id', $selected_turma_id ?? 0) === $t->id)>
                   [{{ $t->id }}] {{ $t->nome }}
                 </option>
               @endforeach
             </select>
+            @error('turma_id')
+              <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+            @enderror
           </div>
 
           <div class="md:col-span-2">
@@ -75,8 +98,8 @@
                     class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
               <option value="">— Ignorar —</option>
               @foreach ($m->professores as $p)
-                <option value="{{ $p->id }}"
-                  @selected( (isset($selected[$m->id]) && (int)$selected[$m->id] === $p->id) )>
+                @php $sel = (int) old('selected.'.$m->id, $selected[$m->id] ?? 0); @endphp
+                <option value="{{ $p->id }}" @selected($sel === $p->id)>
                   {{ $p->nome }} {{ $p->cpf ? '— CPF: '.$p->cpf : '' }}
                 </option>
               @endforeach
@@ -94,12 +117,7 @@
     </form>
 
     {{-- Turmas com grade salva (liberar) --}}
-    @if (!empty($turmas) && isset($turmas) && (($turmasLocked = ($turmasLocked ?? null)) !== null))
-    @endif
-    @php
-      // Computa turmas bloqueadas (com grade) se o controller tiver enviado
-      $hasLocked = isset($turmasLocked) && count($turmasLocked) > 0;
-    @endphp
+    @php $hasLocked = isset($turmasLocked) && count($turmasLocked) > 0; @endphp
 
     @if ($hasLocked)
       <div class="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5">
@@ -117,6 +135,7 @@
               </div>
               <form method="POST" action="{{ route('admin.grade.clear', $t->id) }}">
                 @csrf
+                <input type="hidden" name="periodo" value="{{ $periodo ?? 'manha' }}">
                 <button type="submit"
                         class="inline-flex items-center rounded-xl bg-rose-600 px-3 py-2 text-white text-xs font-medium shadow-sm hover:bg-rose-700"
                         onclick="return confirm('Liberar esta turma? Os professores voltarão a ficar disponíveis nesses horários (se não alocados em outras turmas).')">
@@ -201,6 +220,7 @@
             @csrf
             <input type="hidden" name="turma_id" value="{{ $selected_turma_id }}">
             <input type="hidden" name="grid_ids" value='@json($grid_ids ?? [])'>
+            <input type="hidden" name="periodo" value="{{ $periodo ?? 'manha' }}">
             <button type="submit"
                     class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-emerald-700">
               Salvar grade

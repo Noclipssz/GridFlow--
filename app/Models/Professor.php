@@ -15,7 +15,6 @@ class Professor extends Model
         'cpf',
         'senha',
         'materia_id',
-        'horario_dp',
     ];
 
     protected $hidden = [
@@ -23,7 +22,9 @@ class Professor extends Model
     ];
 
     protected $casts = [
-        'horario_dp' => 'array',
+        'horario_manha' => 'array',
+        'horario_tarde' => 'array',
+        'horario_noite' => 'array',
         'materia_id' => 'integer',
     ];
 

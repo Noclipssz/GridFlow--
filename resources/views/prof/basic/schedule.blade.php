@@ -65,9 +65,18 @@
       x-cloak
       class="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-5"
     >
-      <form method="POST" action="{{ route('prof.basic.schedule.save') }}" @submit.prevent="submit" x-ref="form" class="space-y-5">
+      <form method="POST" action="{{ route('prof.basic.schedule.save', ['periodo' => $periodo ?? 'manha']) }}" @submit.prevent="submit" x-ref="form" class="space-y-5">
         @csrf
         <input type="hidden" name="grid" x-model="payload">
+        <input type="hidden" name="periodo" value="{{ $periodo ?? 'manha' }}">
+
+        <div class="flex items-center gap-3 mb-3">
+          <label class="text-sm font-semibold text-slate-700">Período:</label>
+          @php $p = $periodo ?? 'manha'; @endphp
+          <a href="{{ route('prof.basic.schedule', ['periodo' => 'manha']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='manha' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Manhã</a>
+          <a href="{{ route('prof.basic.schedule', ['periodo' => 'tarde']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='tarde' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Tarde</a>
+          <a href="{{ route('prof.basic.schedule', ['periodo' => 'noite']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='noite' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Noite</a>
+        </div>
 
         <div class="overflow-x-auto">
           <table class="w-full border-separate border-spacing-2 max-w-[980px] mx-auto">

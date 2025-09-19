@@ -52,15 +52,21 @@ class ProfBasicController extends Controller
         $turmas = Turma::orderBy('id')->get();
         $mine = [];
         foreach ($turmas as $t) {
-            $grid = $t->horario_dp;
-            if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
             $count = 0;
-            for ($a = 0; $a < 5; $a++) {
-                $row = $grid[$a] ?? [];
-                for ($d = 0; $d < 5; $d++) {
-                    $cell = $row[$d] ?? null;
-                    if (is_array($cell) && (int)($cell['professor_id'] ?? 0) === $prof->id) {
-                        $count++;
+            foreach (['manha','tarde','noite'] as $per) {
+                $grid = match($per) {
+                    'manha' => $t->horario_manha,
+                    'tarde' => $t->horario_tarde,
+                    'noite' => $t->horario_noite,
+                };
+                if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+                for ($a = 0; $a < 5; $a++) {
+                    $row = $grid[$a] ?? [];
+                    for ($d = 0; $d < 5; $d++) {
+                        $cell = $row[$d] ?? null;
+                        if (is_array($cell) && (int)($cell['professor_id'] ?? 0) === $prof->id) {
+                            $count++;
+                        }
                     }
                 }
             }
@@ -86,7 +92,12 @@ class ProfBasicController extends Controller
         $prof = Professor::with('materia')->findOrFail($id);
 
         // Garantir que este professor participa desta turma
-        $grid = $turma->horario_dp;
+        $periodo = $request->input('periodo', 'manha');
+        $grid = match($periodo) {
+            'manha' => $turma->horario_manha,
+            'tarde' => $turma->horario_tarde,
+            'noite' => $turma->horario_noite,
+        };
         if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
         $isMember = false;
         for ($a = 0; $a < 5; $a++) {
@@ -127,6 +138,7 @@ class ProfBasicController extends Controller
             'profMap'=> $profMap,
             'matMap' => $matMap,
             'days'   => $days,
+            'periodo'=> $periodo,
         ]);
     }
 
@@ -197,13 +209,19 @@ class ProfBasicController extends Controller
 
         $prof = Professor::findOrFail($id);
 
+        $periodo = $request->input('periodo', 'manha');
+
         // Config da grade (ajuste se quiser 5x5, 6x4, etc.)
         $rows = 5; // 1ª..6ª aula
         $cols = 5; // Segunda..Sexta
         $days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
-        // Normaliza o horario_dp do banco para o tamanho escolhido
-        $gridFromDb = $prof->horario_dp; // This is [day][class]
+        // Seleciona a grade do período no banco [dia][aula]
+        $gridFromDb = match($periodo) {
+            'manha' => $prof->horario_manha,
+            'tarde' => $prof->horario_tarde,
+            'noite' => $prof->horario_noite,
+        };
         Log::info('showSchedule: raw grid from DB', ['grid' => $gridFromDb]);
 
         if (!is_array($gridFromDb)) $gridFromDb = json_decode((string) $gridFromDb, true) ?? [];
@@ -228,12 +246,14 @@ class ProfBasicController extends Controller
             'cols' => $cols,
             'days' => $days,
             'grid' => $norm, // This is [class][day]
+            'periodo' => $periodo,
         ]);
     }
 
     public function saveSchedule(Request $request)
     {
         $id = $request->session()->get('prof_id');
+        $periodo = $request->input('periodo', 'manha');
 
         Log::info('schedule.save: hit', [
             'prof_id' => $id,
@@ -266,19 +286,21 @@ class ProfBasicController extends Controller
         $postedGrid = $this->transpose((array) $gridFromFrontend);
 
         // Salvar com comparação antes/depois
-        DB::transaction(function () use ($id, $postedGrid) {
+        DB::transaction(function () use ($id, $postedGrid, $periodo) {
             /** @var \App\Models\Professor $prof */
             $prof = \App\Models\Professor::lockForUpdate()->findOrFail($id);
 
             Log::info('schedule.save: BEFORE', [
                 'id' => $prof->id,
-                'raw' => $prof->getRawOriginal('horario_dp'),
-                'cast_type' => gettype($prof->horario_dp),
-                'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
+                'periodo' => $periodo,
             ]);
 
             // Mescla mantendo 2 (aula). Onde não for 2, aceita 0/1 do payload.
-            $current = $prof->horario_dp;
+            $current = match($periodo) {
+                'manha' => $prof->horario_manha,
+                'tarde' => $prof->horario_tarde,
+                'noite' => $prof->horario_noite,
+            };
             if (!is_array($current)) $current = json_decode((string) $current, true) ?? [];
 
             $DAYS = 5; $SLOTS = 5;
@@ -294,7 +316,11 @@ class ProfBasicController extends Controller
                 }
             }
 
-            $prof->horario_dp = $merged; // (cast array->json)
+            match($periodo) {
+                'manha' => $prof->horario_manha = $merged,
+                'tarde' => $prof->horario_tarde = $merged,
+                'noite' => $prof->horario_noite = $merged,
+            }; // (cast array->json)
 
             Log::info('schedule.save: isDirty', ['isDirty' => $prof->isDirty()]);
             Log::info('schedule.save: getDirty', ['getDirty' => $prof->getDirty()]);
@@ -307,13 +333,11 @@ class ProfBasicController extends Controller
 
             Log::info('schedule.save: AFTER', [
                 'id' => $prof->id,
-                'raw' => $prof->getRawOriginal('horario_dp'),
-                'cast_type' => gettype($prof->horario_dp),
-                'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
+                'periodo' => $periodo,
             ]);
         });
 
-        return redirect()->route('prof.basic.schedule')->with('ok', 'Disponibilidades salvas!');
+        return redirect()->route('prof.basic.schedule', ['periodo' => $periodo])->with('ok', 'Disponibilidades salvas!');
     }
 
     private function transpose(array $grid): array

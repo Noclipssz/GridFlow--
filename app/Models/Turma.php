@@ -10,11 +10,12 @@ class Turma extends Model
 
     protected $fillable = [
         'nome',
-        'horario_dp',
+        'periodo',
     ];
 
     protected $casts = [
-        'horario_dp' => 'array', // [aula][dia] => { professor_id, materia_id } | null
+        'horario_manha' => 'array',
+        'horario_tarde' => 'array',
+        'horario_noite' => 'array',
     ];
 }
-
