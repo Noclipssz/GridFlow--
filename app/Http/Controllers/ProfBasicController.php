@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Professor;
+use App\Models\Turma;
+use App\Models\Materia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -37,6 +39,95 @@ class ProfBasicController extends Controller
         $request->session()->put('prof_id', $prof->id);
 
         return redirect()->route('prof.basic.dashboard');
+    }
+
+    public function listTurmas(Request $request)
+    {
+        $id = $request->session()->get('prof_id');
+        if (!$id) return redirect()->route('prof.basic.login');
+
+        $prof = Professor::with('materia')->findOrFail($id);
+
+        // Busca turmas onde o professor aparece em pelo menos um slot
+        $turmas = Turma::orderBy('id')->get();
+        $mine = [];
+        foreach ($turmas as $t) {
+            $grid = $t->horario_dp;
+            if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+            $count = 0;
+            for ($a = 0; $a < 5; $a++) {
+                $row = $grid[$a] ?? [];
+                for ($d = 0; $d < 5; $d++) {
+                    $cell = $row[$d] ?? null;
+                    if (is_array($cell) && (int)($cell['professor_id'] ?? 0) === $prof->id) {
+                        $count++;
+                    }
+                }
+            }
+            if ($count > 0) {
+                $mine[] = [
+                    'turma' => $t,
+                    'aulas' => $count,
+                ];
+            }
+        }
+
+        return view('prof.turmas.index', [
+            'prof' => $prof,
+            'mine' => $mine,
+        ]);
+    }
+
+    public function showTurma(Request $request, Turma $turma)
+    {
+        $id = $request->session()->get('prof_id');
+        if (!$id) return redirect()->route('prof.basic.login');
+
+        $prof = Professor::with('materia')->findOrFail($id);
+
+        // Garantir que este professor participa desta turma
+        $grid = $turma->horario_dp;
+        if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+        $isMember = false;
+        for ($a = 0; $a < 5; $a++) {
+            $row = $grid[$a] ?? [];
+            for ($d = 0; $d < 5; $d++) {
+                $cell = $row[$d] ?? null;
+                if (is_array($cell) && (int)($cell['professor_id'] ?? 0) === $prof->id) {
+                    $isMember = true; break 2;
+                }
+            }
+        }
+        if (!$isMember) {
+            return redirect()->route('prof.turmas.index')->withErrors(['turma' => 'Você não possui aulas nesta turma.']);
+        }
+
+        // Coletar IDs usados para resolver nomes
+        $profIds = [];
+        $matIds  = [];
+        for ($a = 0; $a < 5; $a++) {
+            $row = $grid[$a] ?? [];
+            for ($d = 0; $d < 5; $d++) {
+                $cell = $row[$d] ?? null;
+                if (is_array($cell)) {
+                    if (!empty($cell['professor_id'])) $profIds[] = (int) $cell['professor_id'];
+                    if (!empty($cell['materia_id']))   $matIds[]  = (int) $cell['materia_id'];
+                }
+            }
+        }
+        $profMap = Professor::whereIn('id', array_unique($profIds))->get()->keyBy('id');
+        $matMap  = Materia::whereIn('id', array_unique($matIds))->get()->keyBy('id');
+
+        $days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+
+        return view('prof.turmas.show', [
+            'prof'   => $prof,
+            'turma'  => $turma,
+            'grid'   => $grid,
+            'profMap'=> $profMap,
+            'matMap' => $matMap,
+            'days'   => $days,
+        ]);
     }
 
     public function showRegister()
@@ -120,11 +211,11 @@ class ProfBasicController extends Controller
         // Transpose for display: [day][class] -> [class][day]
         $gridForDisplay = $this->transpose($gridFromDb);
 
-        // pad/truncate for display dimensions (aula x dia)
+        // pad/truncate for display dimensions (aula x dia), preservando estados 0/1/2
         $norm = [];
         for ($i = 0; $i < $rows; $i++) { // $rows is for display (aula)
             $row = $gridForDisplay[$i] ?? [];
-            $row = array_map(fn($v) => (int)!!$v, array_slice($row, 0, $cols)); // $cols is for display (dia)
+            $row = array_map(function ($v) { $v = (int) $v; return in_array($v, [0,1,2], true) ? $v : (int) !!$v; }, array_slice((array)$row, 0, $cols));
             $row = array_pad($row, $cols, 0);
             $norm[] = $row;
         }
@@ -172,16 +263,10 @@ class ProfBasicController extends Controller
         ]);
 
         // Transpose for saving: [class][day] -> [day][class]
-        $gridForDb = $this->transpose($gridFromFrontend);
-
-        // Sanitiza para 0/1 (apply to the transposed grid)
-        $gridForDb = array_map(
-            fn($row) => array_map(fn($v) => (int) !!$v, (array) $row),
-            (array) $gridForDb
-        );
+        $postedGrid = $this->transpose((array) $gridFromFrontend);
 
         // Salvar com comparação antes/depois
-        DB::transaction(function () use ($id, $gridForDb) {
+        DB::transaction(function () use ($id, $postedGrid) {
             /** @var \App\Models\Professor $prof */
             $prof = \App\Models\Professor::lockForUpdate()->findOrFail($id);
 
@@ -192,7 +277,24 @@ class ProfBasicController extends Controller
                 'cast_preview' => is_array($prof->horario_dp) ? $prof->horario_dp : null,
             ]);
 
-            $prof->horario_dp = $gridForDb; // (cast array->json)
+            // Mescla mantendo 2 (aula). Onde não for 2, aceita 0/1 do payload.
+            $current = $prof->horario_dp;
+            if (!is_array($current)) $current = json_decode((string) $current, true) ?? [];
+
+            $DAYS = 5; $SLOTS = 5;
+            $merged = [];
+            for ($d = 0; $d < $DAYS; $d++) {
+                $merged[$d] = [];
+                for ($a = 0; $a < $SLOTS; $a++) {
+                    $cur = (int) ($current[$d][$a] ?? 0);
+                    $new = (int) ($postedGrid[$d][$a] ?? 0);
+                    // normaliza new para 0/1
+                    $new = $new === 1 ? 1 : 0;
+                    $merged[$d][$a] = ($cur === 2) ? 2 : $new;
+                }
+            }
+
+            $prof->horario_dp = $merged; // (cast array->json)
 
             Log::info('schedule.save: isDirty', ['isDirty' => $prof->isDirty()]);
             Log::info('schedule.save: getDirty', ['getDirty' => $prof->getDirty()]);

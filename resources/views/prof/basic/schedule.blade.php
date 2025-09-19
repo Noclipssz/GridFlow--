@@ -12,12 +12,14 @@
   <style>
     [x-cloak]{display:none!important}
 
-    /* Mantém APENAS as classes dinâmicas usadas pelo seu JS */
-    .on  { background:#ecfdf5; border-color:#a7f3d0; } /* emerald-50 / emerald-200 */
-    .off { background:#f8fafc; color:#64748b; }       /* slate-50  / slate-500   */
+    /* Estados: 0=indisponível, 1=disponível, 2=aula */
+    .state-off  { background:#f8fafc; color:#64748b; border-color:#e2e8f0; }
+    .state-on   { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+    .state-aula { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
 
-    .pill-on  { background:#16a34a; color:#fff; }     /* emerald-600 */
-    .pill-off { background:#94a3b8; color:#fff; }     /* slate-400   */
+    .pill-off  { background:#94a3b8; color:#fff; }
+    .pill-on   { background:#16a34a; color:#fff; }
+    .pill-aula { background:#2563eb; color:#fff; }
   </style>
 </head>
 
@@ -86,19 +88,22 @@
                     <td class="align-top">
                       <div
                         class="rounded-xl border px-4 py-3 h-24 flex items-center justify-center cursor-pointer select-none transition hover:ring-1 hover:ring-slate-300"
-                        :class="grid[{{ $r }}][{{ $c }}] ? 'on' : 'off'"
+                        :class="grid[{{ $r }}][{{ $c }}] === 2 ? 'state-aula' : (grid[{{ $r }}][{{ $c }}] === 1 ? 'state-on' : 'state-off')"
                         @click="toggle({{ $r }}, {{ $c }})"
                       >
                         <div class="text-center">
-                          <div class="font-medium mb-1"
-                               :class="grid[{{ $r }}][{{ $c }}] ? 'text-emerald-800' : 'text-slate-500'">
-                            <span x-text="grid[{{ $r }}][{{ $c }}] ? 'Aula disponível' : 'Aula indisponível'"></span>
+                          <div class="font-medium mb-1">
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 2"><span>Aula</span></template>
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 1"><span>Aula disponível</span></template>
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 0"><span>Aula indisponível</span></template>
                           </div>
 
                           <span class="inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                                :class="grid[{{ $r }}][{{ $c }}] ? 'pill-on' : 'pill-off'">
+                                :class="grid[{{ $r }}][{{ $c }}] === 2 ? 'pill-aula' : (grid[{{ $r }}][{{ $c }}] === 1 ? 'pill-on' : 'pill-off')">
                             <span class="inline-block w-1.5 h-1.5 rounded-full bg-white/90"></span>
-                            <span x-text="grid[{{ $r }}][{{ $c }}] ? 'Disponível' : 'Indisponível'"></span>
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 2"><span>Aula</span></template>
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 1"><span>Disponível</span></template>
+                            <template x-if="grid[{{ $r }}][{{ $c }}] === 0"><span>Indisponível</span></template>
                           </span>
                         </div>
                       </div>
@@ -135,8 +140,12 @@
   <!-- JS ORIGINAL (inalterado) -->
   <script>
     function schedule({ rows, cols, initial }) {
+      // 0=indisp, 1=disp, 2=aula (travado)
       const grid = Array.from({ length: rows }, (_, i) =>
-        Array.from({ length: cols }, (_, j) => (initial?.[i]?.[j] ? 1 : 0))
+        Array.from({ length: cols }, (_, j) => {
+          const v = Number(initial?.[i]?.[j] ?? 0);
+          return v === 2 ? 2 : (v === 1 ? 1 : 0);
+        })
       );
 
       return {
@@ -145,12 +154,13 @@
         grid,
         payload: JSON.stringify(grid),
         toggle(i, j) {
+          if (this.grid[i][j] === 2) return; // não altera aula alocada
           this.grid[i][j] = this.grid[i][j] ? 0 : 1;
         },
         setAll(v) {
           for (let i = 0; i < this.rows; i++)
             for (let j = 0; j < this.cols; j++)
-              this.grid[i][j] = v ? 1 : 0;
+              if (this.grid[i][j] !== 2) this.grid[i][j] = v ? 1 : 0;
         },
         submit(e) {
           this.$refs.form.querySelector('input[name="grid"]').value = JSON.stringify(this.grid);

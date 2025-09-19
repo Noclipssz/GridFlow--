@@ -45,6 +45,10 @@
                  class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-indigo-700">
                 Editar disponibilidade
               </a>
+              <a href="{{ route('prof.turmas.index') }}"
+                 class="inline-flex items-center rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-slate-900">
+                Minhas turmas
+              </a>
             </div>
 
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -65,15 +69,22 @@
               @php
                 $raw = $prof->horario_dp;
                 $arr = is_array($raw) ? $raw : (json_decode((string)$raw, true) ?? []);
-                $total = 0;
+                $disp = 0; $aulas = 0;
                 foreach ($arr as $dia) {
-                  if (is_array($dia)) { foreach ($dia as $v) { $total += (int)!!$v; } }
+                  if (is_array($dia)) {
+                    foreach ($dia as $v) {
+                      $v = (int)$v;
+                      if ($v === 1) $disp++;
+                      elseif ($v === 2) $aulas++;
+                    }
+                  }
                 }
               @endphp
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs uppercase tracking-wide text-slate-500">Horários disponíveis</div>
+                <div class="text-xs uppercase tracking-wide text-slate-500">Resumo de horários</div>
                 <div class="mt-1 text-sm font-medium text-slate-800">
-                  {{ $total }} selecionados
+                  Disponíveis: <span class="text-emerald-700 font-semibold">{{ $disp }}</span>
+                  • Aulas: <span class="text-indigo-700 font-semibold">{{ $aulas }}</span>
                 </div>
               </div>
             </div>
@@ -96,14 +107,15 @@
                         <tr>
                           <td class="text-xs font-semibold text-slate-700 pr-2 whitespace-nowrap">{{ $a+1 }}ª Aula</td>
                           @for ($d = 0; $d < 5; $d++)
-                            @php
+                          @php
                               // Banco: [dia][aula] — aqui transpomos p/ [aula][dia]
                               $v = (int) ($arr[$d][$a] ?? 0);
-                            @endphp
+                              $isDisp = $v === 1; $isAula = $v === 2;
+                          @endphp
                             <td class="align-top">
-                              <div class="h-8 rounded-lg border text-xs grid place-items-center
-                                          {{ $v ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500' }}">
-                                {{ $v ? '✔' : '—' }}
+                              <div class="h-8 rounded-lg border text-[11px] grid place-items-center px-2
+                                          {{ $isAula ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : ($isDisp ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500') }}">
+                                {{ $isAula ? 'Aula' : ($isDisp ? 'Disponível' : '—') }}
                               </div>
                             </td>
                           @endfor

@@ -11,6 +11,8 @@ Route::get('/', function () {
 
 Route::get('/admin/grade', [AdminScheduleController::class, 'form'])->name('admin.grade.form');
 Route::post('/admin/grade/generate', [AdminScheduleController::class, 'generate'])->name('admin.grade.generate');
+Route::post('/admin/grade/save', [AdminScheduleController::class, 'save'])->name('admin.grade.save');
+Route::post('/admin/grade/turmas/{turma}/liberar', [AdminScheduleController::class, 'clear'])->name('admin.grade.clear');
 
 
 Route::get('/prof/login',      [ProfBasicController::class, 'showLogin'])->name('prof.basic.login');
@@ -25,4 +27,6 @@ Route::post('/prof/logout',    [ProfBasicController::class, 'logout'])->name('pr
 Route::get('/prof/horario',  [ProfBasicController::class, 'showSchedule'])->name('prof.basic.schedule');
 Route::post('/prof/horario', [ProfBasicController::class, 'saveSchedule'])->name('prof.basic.schedule.save');
 
-
+// Turmas do professor
+Route::get('/prof/turmas', [ProfBasicController::class, 'listTurmas'])->name('prof.turmas.index');
+Route::get('/prof/turmas/{turma}', [ProfBasicController::class, 'showTurma'])->name('prof.turmas.show');
