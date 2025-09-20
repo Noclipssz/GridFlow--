@@ -11,8 +11,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Middleware aliases
+        $middleware->alias([
+            'prof.auth' => \App\Http\Middleware\EnsureProfessorAuthenticated::class,
+        ]);
     })
+    ->withProviders([
+        \App\Providers\AppServiceProvider::class,
+        \App\Providers\Filament\AdminPanelProvider::class,
+    ])
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

@@ -1,23 +1,14 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>Cadastrar Professor</title>
-
-  {{-- Tailwind via CDN --}}
-  <script src="https://cdn.tailwindcss.com"></script>
-  {{-- Alpine (apenas para mostrar/ocultar senha) --}}
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 relative overflow-hidden">
+@extends('layouts.prof')
+@section('title', 'Cadastrar Professor')
+@section('content')
+<div class="min-h-[70vh] flex items-center justify-center">
 
   {{-- Decoração de fundo (sutil) --}}
   <div aria-hidden="true" class="pointer-events-none absolute -top-28 -right-28 w-[28rem] h-[28rem] rounded-full bg-indigo-300/30 blur-3xl"></div>
   <div aria-hidden="true" class="pointer-events-none absolute -bottom-24 -left-24 w-[28rem] h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
 
-  <main class="relative z-10 flex min-h-screen items-center justify-center p-6">
-    <div class="w-full max-w-lg">
-      <div class="bg-white/90 backdrop-blur shadow-xl ring-1 ring-slate-200 rounded-2xl p-8">
+    <div class="w-full max-w-lg p-6">
+      <x-ui.card class="p-8">
         {{-- Cabeçalho --}}
         <div class="flex items-center gap-3 mb-6">
           <div class="h-11 w-11 rounded-xl bg-indigo-600 text-white grid place-items-center shadow-sm">
@@ -35,11 +26,11 @@
 
         {{-- Alertas de erro (geral) --}}
         @if ($errors->any())
-          <div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800 text-sm">
+          <x-ui.alert type="danger" class="mb-5">
             @foreach ($errors->all() as $e)
               <div>• {{ $e }}</div>
             @endforeach
-          </div>
+          </x-ui.alert>
         @endif
 
         <form method="POST" action="{{ route('prof.basic.register.post') }}" class="space-y-5">
@@ -48,16 +39,13 @@
           {{-- Nome --}}
           <div>
             <label for="nome" class="block text-sm font-medium text-slate-700 mb-1">Nome</label>
-            <input
+            <x-ui.input
               id="nome"
               type="text"
               name="nome"
               value="{{ old('nome') }}"
-              class="block w-full rounded-xl border-slate-300 py-2.5 px-3 text-sm placeholder:text-slate-400
-                     focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="Nome completo"
-              required
-            >
+              required />
             @error('nome')
               <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
             @enderror
@@ -66,18 +54,15 @@
           {{-- CPF --}}
           <div>
             <label for="cpf" class="block text-sm font-medium text-slate-700 mb-1">CPF</label>
-            <input
+            <x-ui.input
               id="cpf"
               type="text"
               name="cpf"
               inputmode="numeric"
               pattern="\d{11}|\d{3}\.?\d{3}\.?\d{3}-?\d{2}"
               value="{{ old('cpf') }}"
-              class="block w-full rounded-xl border-slate-300 py-2.5 px-3 text-sm placeholder:text-slate-400
-                     focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="000.000.000-00"
-              required
-            >
+              required />
             <p class="mt-1 text-xs text-slate-500">Aceita com ou sem pontuação.</p>
             @error('cpf')
               <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
@@ -89,15 +74,12 @@
             <div>
               <label for="senha" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
               <div class="relative">
-                <input
-                  :type="show ? 'text' : 'password'"
+                <x-ui.input
+                  x-bind:type="show ? 'text' : 'password'"
                   id="senha"
                   name="senha"
-                  class="block w-full rounded-xl border-slate-300 py-2.5 pl-3 pr-10 text-sm
-                         focus:border-indigo-500 focus:ring-indigo-500"
                   autocomplete="new-password"
-                  required
-                >
+                  required />
                 <button type="button"
                         class="absolute inset-y-0 right-0 grid w-9 place-items-center text-slate-400 hover:text-slate-600"
                         @click="show = !show" aria-label="Mostrar/ocultar senha">
@@ -116,15 +98,12 @@
 
             <div>
               <label for="senha_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-              <input
+              <x-ui.input
                 id="senha_confirmation"
                 type="password"
                 name="senha_confirmation"
-                class="block w-full rounded-xl border-slate-300 py-2.5 px-3 text-sm
-                       focus:border-indigo-500 focus:ring-indigo-500"
                 autocomplete="new-password"
-                required
-              >
+                required />
             </div>
           </div>
 
@@ -132,11 +111,9 @@
           @isset($materias)
             <div>
               <label for="materia_id" class="block text-sm font-medium text-slate-700 mb-1">Matéria</label>
-              <select
+              <x-ui.select
                 id="materia_id"
                 name="materia_id"
-                class="block w-full rounded-xl border-slate-300 py-2.5 px-3 text-sm
-                       focus:border-indigo-500 focus:ring-indigo-500"
                 required
               >
                 <option value="" disabled {{ old('materia_id') ? '' : 'selected' }}>Selecione...</option>
@@ -145,7 +122,7 @@
                     [{{ $m->id }}] {{ $m->nome }} — {{ $m->quant_aulas }} aulas
                   </option>
                 @endforeach
-              </select>
+              </x-ui.select>
               @error('materia_id')
                 <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
               @enderror
@@ -153,16 +130,13 @@
           @else
             <div>
               <label for="materia_id" class="block text-sm font-medium text-slate-700 mb-1">Matéria (ID)</label>
-              <input
+              <x-ui.input
                 id="materia_id"
                 type="number"
                 name="materia_id"
                 value="{{ old('materia_id') }}"
-                class="block w-full rounded-xl border-slate-300 py-2.5 px-3 text-sm
-                       focus:border-indigo-500 focus:ring-indigo-500"
                 placeholder="ID da matéria"
-                required
-              >
+                required />
               @error('materia_id')
                 <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
               @enderror
@@ -170,10 +144,7 @@
           @endisset
 
           {{-- Botão --}}
-          <button type="submit"
-                  class="w-full inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:bg-emerald-700">
-            Cadastrar
-          </button>
+          <x-ui.button type="submit" variant="primary" class="w-full justify-center">Cadastrar</x-ui.button>
 
           <p class="text-center text-sm text-slate-600">
             Já tem conta?
@@ -182,12 +153,8 @@
             </a>
           </p>
         </form>
-      </div>
-
-      <p class="mt-6 text-center text-xs text-slate-500">
-        © {{ date('Y') }} — Sistema Escolar
-      </p>
+      </x-ui.card>
+      <p class="mt-6 text-center text-xs text-slate-500">© {{ date('Y') }} — Sistema Escolar</p>
     </div>
-  </main>
-</body>
-</html>
+</div>
+@endsection

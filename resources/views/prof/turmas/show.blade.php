@@ -1,20 +1,15 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>Turma • {{ $turma->nome }}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-50 text-slate-800">
-  <div class="max-w-6xl mx-auto p-6">
+@extends('layouts.prof')
+@section('title', 'Turma • ' . $turma->nome)
+@section('content')
+  <div class="max-w-6xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-semibold">Turma: {{ $turma->nome }}</h1>
         <p class="text-sm text-slate-500">Visualize suas aulas e as dos demais professores.</p>
       </div>
       <div class="flex gap-2">
-        <a href="{{ route('prof.turmas.index') }}" class="rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium">Minhas turmas</a>
-        <a href="{{ route('prof.basic.dashboard') }}" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-white text-sm font-medium">Dashboard</a>
+        <x-ui.button variant="secondary" href="{{ route('prof.turmas.index') }}">Minhas turmas</x-ui.button>
+        <x-ui.button href="{{ route('prof.basic.dashboard') }}">Dashboard</x-ui.button>
       </div>
     </div>
 
@@ -26,7 +21,7 @@
       <a href="{{ route('prof.turmas.show', [$turma->id, 'periodo' => 'noite']) }}" class="text-sm px-3 py-1 rounded-lg {{ $p==='noite' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' }}">Noite</a>
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-5">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:bg-slate-800 dark:border-slate-700">
       <div class="overflow-x-auto">
         <table class="w-full border-separate border-spacing-2">
           <thead>
@@ -52,8 +47,7 @@
                         $m = $matMap[$mid] ?? null;
                         $isMe = $pid === $prof->id;
                       @endphp
-                      <div class="rounded-xl border px-4 py-3 h-24 flex items-center justify-center
-                                  {{ $isMe ? 'bg-indigo-50 border-indigo-200' : 'bg-emerald-50 border-emerald-200' }}">
+                      <div class="rounded-xl border px-4 py-3 h-24 flex items-center justify-center {{ $isMe ? 'bg-indigo-50 border-indigo-200' : 'bg-emerald-50 border-emerald-200' }}">
                         <div class="text-center">
                           <div class="text-sm font-semibold {{ $isMe ? 'text-indigo-800' : 'text-emerald-800' }}">
                             {{ $m?->nome ?? 'Matéria' }} — {{ $p?->nome ?? 'Professor' }}
@@ -78,5 +72,4 @@
       </div>
     </div>
   </div>
-</body>
-</html>
+@endsection
