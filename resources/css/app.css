@@ -9,3 +9,178 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer base {
+    :root {
+        color-scheme: light;
+    }
+
+    :root.dark {
+        color-scheme: dark;
+    }
+
+    body {
+        @apply min-h-screen bg-slate-100 text-slate-800 antialiased;
+        font-family: var(--font-sans);
+    }
+
+    /* Remove global link color to avoid overriding Filament */
+    /* Links will inherit colors from their context/components */
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-semibold text-slate-900 dark:text-slate-100;
+    }
+}
+
+@layer components {
+    .page-container {
+        @apply mx-auto w-full max-w-6xl px-4 md:px-6;
+    }
+
+    .page-title {
+        @apply text-2xl font-semibold text-slate-900 dark:text-slate-100;
+    }
+
+    .page-subtitle {
+        @apply text-sm text-slate-500 dark:text-slate-400;
+    }
+
+    .surface {
+        @apply rounded-2xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90;
+    }
+
+    .surface-muted {
+        @apply rounded-xl border border-slate-200/80 bg-slate-50 dark:border-slate-800/60 dark:bg-slate-900/60;
+    }
+
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .btn-primary {
+        @apply bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+    }
+
+    .btn-secondary {
+        @apply bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600;
+    }
+
+    .btn-ghost {
+        @apply bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800;
+    }
+
+    .btn-danger {
+        @apply bg-rose-600 text-white hover:bg-rose-700;
+    }
+
+    .badge,
+    .badge-muted,
+    .badge-positive,
+    .badge-info {
+        @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    .badge {
+        @apply bg-slate-900 text-white dark:bg-slate-700;
+    }
+
+    .badge-muted {
+        @apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200;
+    }
+
+    .badge-positive {
+        @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200;
+    }
+
+    .badge-info {
+        @apply bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200;
+    }
+
+    .theme-toggle {
+        @apply inline-flex items-center rounded-full bg-slate-200/60 p-0.5 text-xs font-medium dark:bg-slate-700/60;
+    }
+
+    .theme-option {
+        @apply rounded-full px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white;
+    }
+
+    :root[data-theme='light'] .theme-option[data-theme-value='light'],
+    :root[data-theme='dark'] .theme-option[data-theme-value='dark'] {
+        @apply bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white;
+    }
+
+    .field {
+        @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100;
+    }
+
+    .field-label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-300;
+    }
+
+    .table-grid {
+        @apply w-full border-separate border-spacing-2 text-sm;
+    }
+
+    .table-grid th {
+        @apply text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+    }
+
+    .table-grid td {
+        @apply align-top;
+    }
+
+    .grid-chip,
+    .grid-chip-default,
+    .grid-chip-available,
+    .grid-chip-my-class {
+        @apply rounded-xl border px-4 py-3;
+    }
+
+    .grid-chip {
+        @apply border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900;
+    }
+
+    .grid-chip-default {
+        @apply border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400;
+    }
+
+    .grid-chip-available {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200;
+    }
+
+    .grid-chip-my-class {
+        @apply border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-200;
+    }
+
+    .schedule-cell,
+    .schedule-off,
+    .schedule-on,
+    .schedule-lock {
+        @apply rounded-xl border px-4 py-3 text-center text-sm transition hover:ring-1 hover:ring-slate-300;
+    }
+
+    .schedule-cell {
+        @apply border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400;
+    }
+
+    .schedule-off {
+        @apply border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400;
+    }
+
+    .schedule-on {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200;
+    }
+
+    .schedule-lock {
+        @apply cursor-not-allowed border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-200;
+    }
+
+    .empty-state {
+        @apply rounded-2xl border border-slate-200 bg-white/95 p-8 text-center text-sm text-slate-500 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90;
+    }
+}
