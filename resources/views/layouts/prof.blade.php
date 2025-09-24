@@ -4,8 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>@yield('title', 'Professor')</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
   <script>
     (function() {
       try {
@@ -26,13 +25,16 @@
         <span>GridFlow — Professor</span>
       </a>
       <div class="flex items-center gap-2">
-        <a href="{{ route('prof.basic.schedule') }}" class="hidden sm:inline-flex text-sm px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Disponibilidade</a>
-        <a href="{{ route('prof.turmas.index') }}" class="hidden sm:inline-flex text-sm px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Minhas turmas</a>
+        <x-ui.button variant="subtle" size="sm" href="{{ route('prof.basic.schedule') }}" class="hidden sm:inline-flex">Disponibilidade</x-ui.button>
+        <x-ui.button variant="subtle" size="sm" href="{{ route('prof.turmas.index') }}" class="hidden sm:inline-flex">Minhas turmas</x-ui.button>
         <form method="POST" action="{{ route('prof.basic.logout') }}" class="hidden sm:inline">
           @csrf
-          <button class="text-sm rounded-xl bg-slate-800 px-3 py-1.5 text-white font-medium hover:bg-slate-900">Sair</button>
+          <x-ui.button variant="secondary" size="sm">Sair</x-ui.button>
         </form>
-        <button type="button" id="themeToggle" class="text-sm rounded-xl bg-slate-100 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">Tema</button>
+        <button type="button" id="themeToggle" class="text-sm rounded-xl bg-slate-100 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+            <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h1M3 12H2m8.042-8.485L11.354 1.646m4.95 1.708l-.707.707M12 21.213V22m-9-9H3m8.042 8.485L11.354 22.354m4.95-1.708l-.707-.707M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg>
+            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -46,16 +48,5 @@
     <div class="max-w-7xl mx-auto px-4 py-6 text-xs text-slate-500">© {{ date('Y') }} GridFlow</div>
   </footer>
 
-  <script>
-    (function(){
-      const btn = document.getElementById('themeToggle');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        const isDark = document.documentElement.classList.toggle('dark');
-        const theme = isDark ? 'dark' : 'light';
-        try { localStorage.setItem('theme', theme); } catch(e) {}
-      });
-    })();
-  </script>
-</body>
+  </body>
 </html>
