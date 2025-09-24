@@ -53,37 +53,35 @@ class GenerateGrade extends Page
                 Forms\Components\Repeater::make('selected')
                     ->label('Professores por matéria')
                     ->schema([
-                        Forms\Components\Select::make('materia_id')
-                            ->options(function () {
-                                $query = Materia::orderBy('id');
-                                $scheduled = $this->getScheduledMateriaIds();
-                                if (!empty($scheduled)) {
-                                    $query->whereNotIn('id', $scheduled);
-                                }
-                                return $query->where('check', true)->pluck('nome', 'id');
-                            })
-                            ->label('Matéria')
-                            ->required()
-                            ->native(false),
-                        Forms\Components\Select::make('professor_id')
-                            ->options(function (Get $get) {
-                                $mid = (int) ($get('materia_id') ?? 0);
-                                if (!$mid) return [];
-                                if ($this->only_available) {
-                                    $per = (string) $this->periodo;
-                                    return Professor::where('materia_id', $mid)->get()
-                                        ->filter(fn ($p) => $this->hasAvailability($p, $per))
-                                        ->sortBy('nome')->pluck('nome', 'id');
-                                }
-                                return Professor::where('materia_id', $mid)->orderBy('nome')->pluck('nome', 'id');
-                    })
-                    ->label('Professor responsável')
-                    ->searchable()
-                    ->preload()
-                    ->native(false),
+                        Forms\Components\Section::make(function (Get $get) {
+                            $materia = Materia::find($get('materia_id'));
+                            return $materia?->nome ?? 'Matéria';
+                        })
+                        ->description(function (Get $get) {
+                            $materia = Materia::find($get('materia_id'));
+                            $aulas = $materia?->quant_aulas ?? 0;
+                            return "{$aulas} aulas/semana";
+                        })
+                        ->schema([
+                            Forms\Components\Select::make('professor_id')
+                                ->options(function (Get $get) {
+                                    $mid = (int) ($get('materia_id') ?? 0);
+                                    if (!$mid) return [];
+                                    if ($this->only_available) {
+                                        $per = (string) $this->periodo;
+                                        return Professor::where('materia_id', $mid)->get()
+                                            ->filter(fn ($p) => $this->hasAvailability($p, $per))
+                                            ->sortBy('nome')->pluck('nome', 'id');
+                                    }
+                                    return Professor::where('materia_id', $mid)->orderBy('nome')->pluck('nome', 'id');
+                                })
+                                ->label('Professor responsável')
+                                ->searchable()
+                                ->preload()
+                                ->native(false),
+                        ])
                     ])
-                    ->columns(2)
-                    ->grid(2)
+                    ->grid(3)
                     ->addable(false)
                     ->deletable(false)
                     ->reorderable(false)

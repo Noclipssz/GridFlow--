@@ -1,6 +1,10 @@
 <x-filament::page>
   <div id="generate-grade" class="space-y-6">
     <style>
+      /* Aumenta o espaçamento entre os cards de matéria */
+      #generate-grade .fi-fo-repeater-items {
+        gap: 1rem; /* 16px */
+      }
       /* Repeater item: keep fields on same row and roomy */
       #generate-grade .filament-forms-field-wrapper { margin-bottom: .5rem; }
       /* TomSelect safety: hide extra clear/remove buttons */
