@@ -17,7 +17,12 @@
           <x-filament::button wire:click="clearSelection" color="gray" icon="heroicon-m-arrow-path">Limpar</x-filament::button>
         </div>
         <div class="flex items-center gap-2">
-          <x-filament::button type="submit" color="primary" icon="heroicon-m-cog-6-tooth">Gerar grade</x-filament::button>
+          <x-filament::button type="submit" color="primary" icon="heroicon-m-cog-6-tooth" wire:loading.attr="disabled">
+            Gerar grade
+          </x-filament::button>
+          <div wire:loading wire:target="generate">
+            <x-filament::loading-indicator class="h-5 w-5" />
+          </div>
         </div>
       </div>
     </form>
@@ -93,7 +98,6 @@
         </div>
 
         <div class="mt-4 flex flex-wrap justify-end gap-2">
-          <x-filament::button wire:click="validateGrid" color="gray" icon="heroicon-m-check-circle">Validar grade</x-filament::button>
           <x-filament::button wire:click="save" color="primary" :disabled="(($meta['missing_total'] ?? 0) > 0)" icon="heroicon-m-arrow-down-tray">Salvar grade</x-filament::button>
         </div>
       </div>

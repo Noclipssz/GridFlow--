@@ -131,6 +131,19 @@ class ProfBasicController extends Controller
 
         $days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
+        // Determina os períodos que têm aulas para esta turma
+        $periodosAtivos = [];
+        foreach (['manha', 'tarde', 'noite'] as $per) {
+            $horario = $turma->{'horario_' . $per};
+            if (!is_array($horario)) {
+                $horario = json_decode((string) $horario, true) ?? [];
+            }
+            // Verifica se a grade não está vazia
+            if (!empty(array_filter(array_merge(...$horario)))) {
+                $periodosAtivos[] = $per;
+            }
+        }
+
         return view('prof.turmas.show', [
             'prof'   => $prof,
             'turma'  => $turma,
@@ -139,6 +152,7 @@ class ProfBasicController extends Controller
             'matMap' => $matMap,
             'days'   => $days,
             'periodo'=> $periodo,
+            'periodosAtivos' => $periodosAtivos,
         ]);
     }
 
@@ -191,7 +205,33 @@ class ProfBasicController extends Controller
             return redirect()->route('prof.basic.login');
         }
 
-        return view('prof.basic.dashboard', compact('prof'));
+        // CONTAGEM DE TURMAS ATIVAS
+        // Reutiliza a lógica de `listTurmas` para consistência
+        $turmas = Turma::orderBy('id')->get();
+        $turmasAtivas = 0;
+        foreach ($turmas as $t) {
+            $isMember = false;
+            foreach (['manha','tarde','noite'] as $per) {
+                $grid = $t->{'horario_' . $per};
+                if (!is_array($grid)) $grid = json_decode((string) $grid, true) ?? [];
+
+                for ($a = 0; $a < 5; $a++) {
+                    $row = $grid[$a] ?? [];
+                    for ($d = 0; $d < 5; $d++) {
+                        $cell = $row[$d] ?? null;
+                        if (is_array($cell) && (int)($cell['professor_id'] ?? 0) === $prof->id) {
+                            $isMember = true;
+                            break 3; // Sai de todos os loops aninhados
+                        }
+                    }
+                }
+            }
+            if ($isMember) {
+                $turmasAtivas++;
+            }
+        }
+
+        return view('prof.basic.dashboard', compact('prof', 'turmasAtivas'));
     }
 
     public function logout(Request $request)

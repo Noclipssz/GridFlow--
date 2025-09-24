@@ -11,6 +11,7 @@ use App\Filament\Resources\MateriaResource;
 use App\Filament\Resources\ProfessorResource;
 use App\Filament\Resources\TurmaResource;
 use App\Filament\Pages\GenerateGrade;
+use App\Filament\Widgets\StatsOverviewWidget;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -43,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
                 GenerateGrade::class,
             ])
             ->widgets([
+                StatsOverviewWidget::class,
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ]);

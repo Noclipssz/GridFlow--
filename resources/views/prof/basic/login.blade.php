@@ -26,15 +26,15 @@
     </style>
 </head>
 
-<body class="h-full bg-slate-100 dark:bg-slate-950 selection:bg-amber-200/60 dark:selection:bg-amber-400/30">
+<body class="h-full bg-slate-100 dark:bg-slate-950 selection:bg-indigo-200/60 dark:selection:bg-indigo-400/30">
 
     <!-- Decorações suaves de fundo -->
     <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
         <div
-            class="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-40 bg-amber-300 dark:bg-amber-500">
+            class="absolute -top-24 -right-24 h-72 w-72 rounded-full blur-3xl opacity-40 bg-indigo-300 dark:bg-indigo-500">
         </div>
         <div
-            class="absolute bottom-0 left-1/2 -translate-x-1/2 h-72 w-[36rem] bg-gradient-to-t from-amber-200/40 to-transparent dark:from-amber-500/10 blur-2xl">
+            class="absolute bottom-0 left-1/2 -translate-x-1/2 h-72 w-[36rem] bg-gradient-to-t from-indigo-200/40 to-transparent dark:from-indigo-500/10 blur-2xl">
         </div>
     </div>
 
@@ -48,7 +48,7 @@
                 class="max-w-md w-full space-y-8 p-8 md:p-10 bg-white/95 dark:bg-slate-900/80 rounded-2xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur">
                 <div class="text-center space-y-3">
                     <span
-                        class="inline-grid place-items-center h-12 w-12 rounded-xl bg-amber-600 text-white text-xl font-bold shadow-sm">Gf</span>
+                        class="inline-grid place-items-center h-12 w-12 rounded-xl bg-indigo-600 text-white text-xl font-bold shadow-sm">Gf</span>
                     <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
                         Portal do Professor
                     </h2>
@@ -103,7 +103,7 @@
                                 pattern="\d{11}|\d{3}\.?\d{3}\.?\d{3}-?\d{2}" placeholder="000.000.000-00"
                                 value="{{ old('cpf') }}" autocomplete="username" required
                                 aria-invalid="@error('cpf') true @else false @enderror"
-                                class="pl-9 h-11 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/60 transition" />
+                                class="pl-9 h-11 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/60 transition" />
 
                         </div>
                         @error('cpf')
@@ -128,7 +128,7 @@
                                 <x-ui.input x-bind:type="show ? 'text' : 'password'" id="senha" name="senha"
                                     autocomplete="current-password" required
                                     aria-invalid="@error('senha') true @else false @enderror"
-                                    class="pl-9 h-11 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/60 transition" />
+                                    class="pl-9 h-11 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/60 transition" />
 
                                 <button type="button"
                                     class="absolute inset-y-0 right-0 grid w-10 place-items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
@@ -152,13 +152,13 @@
 
                     <div>
                         <x-ui.button type="submit"
-                            class="w-full justify-center h-11 rounded-xl bg-amber-600 hover:bg-amber-700 focus:ring-2 focus:ring-amber-500/60 focus:outline-none font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition">
+                            class="w-full justify-center h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500/60 focus:outline-none font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition">
                             Entrar
                         </x-ui.button>
                     </div>
                     <div class="text-center text-sm">
                         <a href="{{ route('prof.basic.register') }}"
-                            class="font-medium text-amber-600 hover:text-amber-500 underline-offset-4 hover:underline">
+                            class="font-medium text-indigo-600 hover:text-indigo-500 underline-offset-4 hover:underline">
                             Não tem conta? Cadastre-se
                         </a>
                     </div>
